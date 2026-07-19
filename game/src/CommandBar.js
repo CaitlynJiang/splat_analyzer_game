@@ -164,7 +164,18 @@ export class CommandBar {
             break;
           case "report":
             clearWaiting();
-            await this.type(r.text, "cb-vin");
+            // VIN's "I have nothing for you" — type it slowly, it lands better
+            // as a process failing to find a response than as a sentence.
+            if (/^[.…]{3,}$/.test(r.text.trim())) {
+              await this.type(r.text.trim(), "cb-null", 260);
+            } else {
+              await this.type(r.text, "cb-vin");
+            }
+            // If a template stood in for the model, say so — otherwise a dull
+            // reply looks like a dull model rather than a broken pipe.
+            if (r.source && r.source !== "llm" && r.source !== "cache") {
+              this.say(`[canned — ${r.source}]`, "cb-dim");
+            }
             break;
           case "hit":
             clearWaiting();
@@ -232,14 +243,14 @@ export class CommandBar {
   }
 
   /** Typewriter, because VIN reporting over a bad channel should feel like it. */
-  type(text, cls = "") {
+  type(text, cls = "", speed = TYPE_MS) {
     const line = this.say("", cls);
     return new Promise((resolve) => {
       let i = 0;
       const tick = () => {
         line.textContent = text.slice(0, ++i);
         this.feedEl.scrollTop = this.feedEl.scrollHeight;
-        if (i < text.length) setTimeout(tick, TYPE_MS);
+        if (i < text.length) setTimeout(tick, speed);
         else resolve(line);
       };
       tick();

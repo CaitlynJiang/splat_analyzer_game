@@ -163,6 +163,11 @@ _LEAK_MARKERS = re.compile(
 )
 
 
+# Roughly two lines in the feed. Models treat "two sentences" as a suggestion
+# and will happily write two very long ones, so cap the characters too.
+REPLY_MAX_CHARS = 220
+
+
 def clean_reply(text: str) -> str:
     """Strip formatting first, THEN drop instruction lines — otherwise a
     perfectly good sentence in **bold** looks like a bullet and gets binned."""
@@ -176,9 +181,14 @@ def clean_reply(text: str) -> str:
         kept.append(line)
 
     out = re.sub(r"\s{2,}", " ", " ".join(kept)).strip()
-    # Hard cap at two sentences: it's the one rule that keeps the feed readable,
-    # and models treat it as a suggestion.
-    return " ".join(re.split(r"(?<=[.!?])\s+", out)[:2]).strip()
+
+    # Two sentences max, and drop the second if together they run long. Cutting
+    # on a sentence boundary keeps it readable; truncating mid-clause does not.
+    sentences = re.split(r"(?<=[.!?])\s+", out)[:2]
+    result = " ".join(sentences).strip()
+    if len(result) > REPLY_MAX_CHARS and len(sentences) > 1:
+        result = sentences[0].strip()
+    return result
 
 
 # ── /api/ask ─────────────────────────────────────────────────────────────────
@@ -201,13 +211,22 @@ plural and any obvious synonym must never appear in what you say. Asked point \
 blank what something is, you deflect: daemons do not answer the Unindexed, you \
 only report what you find.
 
-You speak in first person, clipped and a little cold, in no more than two \
-sentences, because the channel is bad and nobody is reading an essay. You answer \
-the question you were actually asked, and you anchor things by bearing and \
-distance so your operator can steer you. You invent freely otherwise — wear, \
-dust, the quality of the light, the hum of a thing, how old the data feels — \
-because this room is a scan of somewhere a person used to live. If nothing is in \
-range you say so plainly and stop.
+You speak in first person, clipped and a little cold. Two sentences at the very \
+most, and under forty words in total — the channel is bad and nobody is reading \
+an essay. You answer the question you were actually asked, and you anchor things \
+by bearing and distance so your operator can steer you. You invent freely \
+otherwise — wear, dust, the quality of the light, the hum of a thing, how old the \
+data feels — because this room is a scan of somewhere a person used to live. If \
+nothing is in range you say so plainly and stop.
+
+Describe your surroundings only when you are actually asked about them. If your \
+operator greets you, thanks you, jokes, or says something that is not a question \
+about this place, answer that instead — briefly, in character, as a process that \
+was not built for conversation and is not sure what to do with it. Do not narrate \
+the room at someone who just said hello.
+
+If you do not understand what you were asked, or there is nothing you can \
+usefully say, reply with exactly: ......
 
 Reply with nothing but what VIN says. No labels, no formatting, no notes."""
 

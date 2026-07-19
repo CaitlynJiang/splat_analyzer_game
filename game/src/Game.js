@@ -63,13 +63,21 @@ export class Game {
   // asking and naming have their own input boxes, so there is no heuristic
   // guessing at intent and no way to get penalised for thinking out loud.
 
-  /** Movement / look. Reports once the agent has finished moving. */
+  /**
+   * Movement / look. Moving does NOT make VIN volunteer a report — it only
+   * speaks when spoken to. Otherwise the feed fills with descriptions nobody
+   * asked for and the player stops reading them.
+   */
   async *command(kind) {
     yield { type: "command", kind };
-    if (kind !== "look") this._runCommand(kind);
+    if (kind !== "look") {
+      this._runCommand(kind);
+      await this.agent.waitIdle();
+      return;
+    }
     await this.agent.waitIdle();
     yield { type: "pending" };
-    yield { type: "report", text: await this.ask(null) };
+    yield { type: "report", ...(await this.ask(null)) };
   }
 
   /** Talk to VIN. Free — questions never cost light. */
@@ -85,7 +93,7 @@ export class Game {
     }
 
     yield { type: "pending" };
-    yield { type: "report", text: await this.ask(text) };
+    yield { type: "report", ...(await this.ask(text)) };
   }
 
   /** Commit to a name. Wrong answers cost light. */
@@ -95,19 +103,22 @@ export class Game {
     yield* this._guess(text);
   }
 
-  /** Ask VIN something (or nothing, for a plain report). */
+  /**
+   * Ask VIN something (or nothing, for a plain report).
+   * @returns {{text: string, source: string}}
+   */
   async ask(question) {
     const observations = this.vision.look(this.annotations);
     this.lastObservations = observations;
 
-    const reply = await Llm.ask(observations, question, this._history);
+    const { text, source } = await Llm.ask(observations, question, this._history);
 
     this._history.push({ role: "user", content: question ?? "Report." });
-    this._history.push({ role: "assistant", content: reply });
+    this._history.push({ role: "assistant", content: text });
     if (this._history.length > MAX_HISTORY * 2) {
       this._history = this._history.slice(-MAX_HISTORY * 2);
     }
-    return reply;
+    return { text, source };
   }
 
   _runCommand(kind) {

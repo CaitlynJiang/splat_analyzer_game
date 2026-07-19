@@ -195,7 +195,7 @@ body {
 
 .intro-status {
   position: absolute;
-  bottom: 46px;
+  bottom: 84px;
   left: 50%;
   transform: translateX(-50%);
   font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
@@ -209,7 +209,8 @@ body {
 
 .intro-skip {
   position: absolute;
-  right: 34px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 30px;
   font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
   font-size: 11px;
@@ -268,6 +269,7 @@ body {
 .cb-miss { color: #d4614f; }
 .cb-dim  { color: var(--muted); font-style: italic; }
 .cb-vin  { color: #cfe0f0; }
+.cb-null { color: #4a6076; letter-spacing: 0.3em; }
 .cb-wait { color: var(--muted); animation: cb-pulse 1.1s ease-in-out infinite; }
 
 @keyframes cb-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.75; } }

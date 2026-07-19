@@ -37,8 +37,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export class Intro {
   constructor() {
-    this._skipped = false;
-    this._resolveSkip = null;
+    this._done = false;
+    this._advance = null; // resolves the paragraph currently on screen
 
     this.root = document.createElement("div");
     this.root.id = "intro";
@@ -51,7 +51,6 @@ export class Intro {
 
     this.skipEl = document.createElement("button");
     this.skipEl.className = "intro-skip";
-    this.skipEl.textContent = "Skip ›";
     this.skipEl.addEventListener("click", () => this.skip());
 
     this.root.append(this.textEl, this.statusEl, this.skipEl);
@@ -63,27 +62,36 @@ export class Intro {
     window.addEventListener("keydown", this._onKey);
   }
 
+  /** One click advances past the paragraph on screen, not the whole crawl. */
   skip() {
-    if (this._skipped) return;
-    this._skipped = true;
-    this._resolveSkip?.();
+    this._advance?.();
   }
 
-  /** Resolves when the crawl has finished, or immediately once skipped. */
+  /** Resolves when every paragraph has been shown or skipped past. */
   async play() {
-    const skipped = new Promise((r) => (this._resolveSkip = r));
+    for (let i = 0; i < PARAGRAPHS.length; i++) {
+      // A fresh advance signal per paragraph, so one click consumes one.
+      let fire;
+      const advanced = new Promise((r) => (fire = r));
+      this._advance = fire;
+      this._skipping = false;
+      advanced.then(() => (this._skipping = true));
 
-    for (const lines of PARAGRAPHS) {
-      if (this._skipped) break;
-      await Promise.race([this._paragraph(lines), skipped]);
-      if (this._skipped) break;
-      await Promise.race([sleep(READ_MS), skipped]);
-      if (this._skipped) break;
-      await Promise.race([this._fadeOutText(), skipped]);
+      this._updateSkipLabel(i);
+
+      await Promise.race([this._paragraph(PARAGRAPHS[i]), advanced]);
+      if (!this._skipping) await Promise.race([sleep(READ_MS), advanced]);
+      await this._fadeOutText();
     }
 
-    if (this._skipped) await this._fadeOutText();
+    this._advance = null;
     this.skipEl.classList.add("gone");
+    this._done = true;
+  }
+
+  _updateSkipLabel(i) {
+    const last = i === PARAGRAPHS.length - 1;
+    this.skipEl.textContent = last ? "Begin ›" : `Skip ›  ${i + 1}/${PARAGRAPHS.length}`;
   }
 
   async _paragraph(lines) {
@@ -105,10 +113,7 @@ export class Intro {
       });
 
       for (const s of spans) {
-        if (this._skipped) {
-          for (const rest of spans) rest.classList.add("on");
-          return;
-        }
+        if (this._skipping) return;
         s.classList.add("on");
         await sleep(TYPE_MS);
       }

@@ -47,7 +47,11 @@ export const Llm = {
     }
   },
 
-  /** @param {string|null} question - null means "just report" */
+  /**
+   * @param {string|null} question - null means "just report"
+   * @returns {{text: string, source: string}} source is "llm" when the model
+   *   actually answered, anything else means a template stood in for it.
+   */
   async ask(observations, question = null, history = []) {
     try {
       const j = await post("/api/ask", {
@@ -55,10 +59,10 @@ export const Llm = {
         question,
         history,
       });
-      return j.text;
+      return { text: j.text, source: j.source ?? "unknown" };
     } catch (e) {
       console.warn("ask failed, using local template", e);
-      return localAnswer(observations);
+      return { text: localAnswer(observations), source: "offline" };
     }
   },
 
