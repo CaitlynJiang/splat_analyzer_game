@@ -1,0 +1,43 @@
+{
+  "_NOTE": "MOCK DATA for team development — hand-written to match Splat Analyzer's real output schema (verified against pipeline.py). Replace with real interactions.json once the pipeline runs. Coordinates are plausible for the INRIA room.ply scene (center ~[0.9, 1.5, -0.2], radius ~6). rotation is ALWAYS identity (tool outputs axis-aligned boxes only). 'scale' = full box dimensions in world units, 'position' = box center in the splat's own coordinate frame.",
+  "objects": [
+    {
+      "label": "chair",
+      "position": { "x": -0.42, "y": 1.31, "z": 1.05 },
+      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 },
+      "scale": { "x": 0.85, "y": 1.10, "z": 0.90 },
+      "frames": [
+        { "frame_idx": 7,  "box": [112.4, 201.8, 298.1, 460.3], "score": 0.5231 },
+        { "frame_idx": 13, "box": [340.0, 188.2, 471.9, 411.7], "score": 0.4418 }
+      ]
+    },
+    {
+      "label": "table",
+      "position": { "x": 0.91, "y": 1.02, "z": -0.18 },
+      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 },
+      "scale": { "x": 1.80, "y": 0.75, "z": 1.10 },
+      "frames": [
+        { "frame_idx": 3,  "box": [88.0, 240.5, 430.2, 500.0], "score": 0.6102 }
+      ]
+    },
+    {
+      "label": "vase",
+      "position": { "x": 1.12, "y": 0.55, "z": -0.25 },
+      "rotation": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 },
+      "scale": { "x": 0.25, "y": 0.40, "z": 0.25 },
+      "frames": [
+        { "frame_idx": 3,  "box": [255.6, 190.0, 301.2, 268.4], "score": 0.4877 },
+        { "frame_idx": 19, "box": [140.3, 205.1, 188.0, 279.9], "score": 0.4123 }
+      ]
+    }
+  ],
+  "frame_annotations": {
+    "3":  [
+      { "label": "table", "object_idx": 1, "box": [88.0, 240.5, 430.2, 500.0], "score": 0.6102 },
+      { "label": "vase",  "object_idx": 2, "box": [255.6, 190.0, 301.2, 268.4], "score": 0.4877 }
+    ],
+    "7":  [ { "label": "chair", "object_idx": 0, "box": [112.4, 201.8, 298.1, 460.3], "score": 0.5231 } ],
+    "13": [ { "label": "chair", "object_idx": 0, "box": [340.0, 188.2, 471.9, 411.7], "score": 0.4418 } ],
+    "19": [ { "label": "vase",  "object_idx": 2, "box": [140.3, 205.1, 188.0, 279.9], "score": 0.4123 } ]
+  }
+}

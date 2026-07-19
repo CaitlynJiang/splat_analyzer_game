@@ -34,8 +34,8 @@ class PipelineConfig:
     n_elevation: int = 3
 
     # ── camera placement (density-aware band-pass sampler) ─────────────────
-    bbox_pct_lo: float = 1.0                # robust bounding-box lower percentile
-    bbox_pct_hi: float = 99.0               # robust bounding-box upper percentile
+    bbox_pct_lo: float = 10.0               # robust bounding-box lower percentile (tightened from 1.0: reject floaters)
+    bbox_pct_hi: float = 90.0               # robust bounding-box upper percentile (tightened from 99.0)
     min_sep_frac: float = 0.12              # Poisson-disk min camera separation (frac of bbox diagonal)
     density_radius_frac: float = 0.05       # neighbour-count radius (frac of bbox diagonal)
     bandpass_alpha: float = 1.0             # band-pass width; larger = more permissive
