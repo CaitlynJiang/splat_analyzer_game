@@ -1,0 +1,488 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:        #07090f;
+  --surface:   #0c1018;
+  --border:    #19232f;
+  --text:      #bfcfe0;
+  --muted:     #3d5268;
+  --accent:    #3385f5;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+#viewport {
+  position: fixed;
+  inset: 0;
+}
+
+#viewport canvas { display: block; }
+
+/* CSS2DRenderer overlay: transparent to pointer events except on markers */
+.css2d-layer { pointer-events: none; }
+
+#empty-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+  user-select: none;
+}
+#empty-hint.hidden { display: none; }
+
+/* ── Animations ───────────────────────────────────────────────────────── */
+/* Single-shot: fires once on hover, then stops. Confirmation, not decoration. */
+@keyframes ring-pulse {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* ── Object markers (CSS2D) ───────────────────────────────────────────── */
+.marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transform: translateY(-50%);
+}
+
+.marker-title {
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 3px 8px 3px 7px;
+  border-radius: 2px;
+  background: rgba(5, 7, 12, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-left: 2px solid var(--dot-color);
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  opacity: 0.82;
+  transition: opacity 0.18s ease;
+}
+
+.marker-title.faded { opacity: 0; }
+
+/* Connector — gradient hairline from label to dot */
+.marker-line {
+  width: 1px;
+  height: 9px;
+  background: linear-gradient(to bottom, var(--dot-color), transparent);
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+
+/* Hollow dot — no glow at rest; color is identification, not decoration */
+.marker-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--dot-color);
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+  transition: transform 0.14s ease;
+}
+
+/* Pulse ring — single-shot on hover, then stops */
+.marker-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--dot-color);
+  animation: none;
+  pointer-events: none;
+}
+
+.marker:hover .marker-dot         { transform: scale(1.15); }
+.marker:hover .marker-dot::after  { animation: ring-pulse 0.5s ease-out 1; }
+
+/* ── Hover label (slides in above box top on hover) ───────────────────── */
+.hover-label-anchor {
+  pointer-events: none;
+  position: relative;
+  height: 0;
+}
+
+.hover-label {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 4px 10px 4px 8px;
+  border-radius: 2px;
+  background: rgba(5, 7, 12, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 2.5px solid var(--dot-color);
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+}
+
+.hover-label.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+/* ── Intro crawl ──────────────────────────────────────────────────────── */
+#intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 24px;
+  opacity: 1;
+  transition: opacity 1.2s ease;
+}
+#intro.gone { opacity: 0; pointer-events: none; }
+
+.intro-text {
+  width: min(660px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: opacity 0.9s ease;
+}
+.intro-text.fading { opacity: 0; }
+
+.intro-text p {
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  font-size: 15px;
+  line-height: 1.85;
+  letter-spacing: 0.015em;
+  color: #c3d4e6;
+}
+
+/* Each character fades up rather than snapping on. */
+.intro-ch {
+  opacity: 0;
+  transition: opacity 0.42s ease;
+}
+.intro-ch.on { opacity: 1; }
+
+.intro-status {
+  position: absolute;
+  bottom: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.intro-status.on { opacity: 1; animation: cb-pulse 1.6s ease-in-out infinite; }
+
+.intro-skip {
+  position: absolute;
+  right: 34px;
+  bottom: 30px;
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 9px 15px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, opacity 0.5s ease;
+}
+.intro-skip:hover { color: var(--text); border-color: var(--accent); }
+.intro-skip.gone { opacity: 0; pointer-events: none; }
+
+/* ── Command bar (the whole player interface) ─────────────────────────── */
+#commandbar {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 48px));
+  z-index: 20;
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+}
+
+.cb-feed {
+  max-height: 168px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 24px);
+}
+.cb-feed::-webkit-scrollbar { display: none; }
+
+.cb-line {
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  animation: cb-in 0.22s ease-out;
+}
+@keyframes cb-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cb-echo { color: var(--muted); }
+.cb-ok   { color: #7f9bb8; }
+.cb-hit  { color: #e3b341; }
+.cb-miss { color: #d4614f; }
+.cb-dim  { color: var(--muted); font-style: italic; }
+.cb-vin  { color: #cfe0f0; }
+.cb-wait { color: var(--muted); animation: cb-pulse 1.1s ease-in-out infinite; }
+
+@keyframes cb-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.75; } }
+
+.cb-loading { color: #4f7fb8; animation: cb-pulse 1.4s ease-in-out infinite; }
+
+/* Movement pad — fixed vocabulary, so it doesn't need to be typed */
+.cb-pad {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.cb-btn {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 7px 12px;
+  color: var(--text);
+  background: rgba(6, 9, 15, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.14s ease, background 0.14s ease, transform 0.08s ease;
+}
+.cb-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(18, 28, 42, 0.9); }
+.cb-btn:active:not(:disabled) { transform: translateY(1px); }
+.cb-btn:disabled { opacity: 0.35; cursor: default; }
+
+.cb-btn-look {
+  margin-left: auto;
+  border-color: rgba(51, 133, 245, 0.4);
+  color: #9dc4f5;
+}
+
+/* Two inputs: asking is free, naming commits. They look different on purpose. */
+.cb-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cb-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  background: rgba(6, 9, 15, 0.82);
+  border: 1px solid var(--border);
+  border-left-width: 2px;
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.cb-row-ask  { border-left-color: var(--accent); }
+.cb-row-name { border-left-color: #e3b341; }
+
+.cb-row-ask:focus-within  { border-color: rgba(51, 133, 245, 0.55); background: rgba(9, 14, 23, 0.9); }
+.cb-row-name:focus-within { border-color: rgba(227, 179, 65, 0.5);  background: rgba(9, 14, 23, 0.9); }
+.cb-row-ask:focus-within  { border-left-color: var(--accent); }
+.cb-row-name:focus-within { border-left-color: #e3b341; }
+
+.cb-row.thinking { opacity: 0.45; }
+
+.cb-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  width: 34px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.cb-row-ask  .cb-tag { color: #4f7fb8; }
+.cb-row-name .cb-tag { color: #8a7233; }
+.cb-row-ask:focus-within  .cb-tag { color: var(--accent); }
+.cb-row-name:focus-within .cb-tag { color: #e3b341; }
+
+.cb-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  min-width: 0;
+}
+.cb-input::placeholder { color: #2c3d50; }
+.cb-input:disabled { cursor: default; }
+
+.cb-echo-name { color: #8a7233; }
+
+/* ── Progress ─────────────────────────────────────────────────────────── */
+#cb-progress {
+  position: fixed;
+  top: 26px;
+  left: 34px;
+  z-index: 20;
+  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, monospace;
+  transition: opacity 0.4s ease;
+}
+#cb-progress.dimmed { opacity: 0.35; }
+
+.cb-bar {
+  width: 300px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.cb-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2f81f7, #56d4dd);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cb-pct {
+  margin-top: 9px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #4d9bf0;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Settings FAB + menu ──────────────────────────────────────────────── */
+#settings {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 10;
+}
+
+.fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.fab:hover { background: #111824; }
+.fab svg { transition: transform 0.3s ease; }
+.fab.open svg { transform: rotate(60deg); }
+
+.menu {
+  position: absolute;
+  left: 0;
+  bottom: 56px;
+  width: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.menu.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.menu h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.file-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color 0.15s ease;
+}
+.file-btn:hover { border-color: var(--accent); }
+.file-btn.loaded { border-color: var(--accent); color: var(--text); }
+
+.field input[type="file"] { display: none; }

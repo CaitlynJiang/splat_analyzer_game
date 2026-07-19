@@ -20,3 +20,4 @@ venv/
 third_party/
 *.air
 *.metallib
+build_log.txt
